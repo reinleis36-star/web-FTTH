@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FTTH Network & Fiber Infrastructure Planning Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#ecfeff',
+                            100: '#cffafe',
+                            500: '#06b6d4',
+                            600: '#0891b2',
+                            700: '#0e7490',
+                            800: '#155e75',
+                            900: '#164e63',
+                        },
+                        dark: {
+                            bg: '#0f172a',
+                            card: '#1e293b',
+                            border: '#334155',
+                            hover: '#334155'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background: white !important; color: black !important; }
+            .print-card { border: 1px solid #ccc !important; box-shadow: none !important; background: white !important; color: black !important; }
+            .print-table th, .print-table td { border: 1px solid #ddd !important; padding: 6px !important; color: black !important; }
+        }
+        .print-only { display: none; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #0891b2; }
+    </style>
+</head>
+<body class="bg-dark-bg text-slate-100 font-sans min-h-screen antialiased flex flex-col justify-between">
+
+    <!-- LOGIN SCREEN (Hides main app when active) -->
+    <div id="loginSection" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950 p-4">
+        <div class="max-w-md w-full bg-dark-card border border-dark-border rounded-2xl p-8 shadow-2xl relative overflow-hidden">
+            <div class="absolute -top-10 -right-10 w-32 h-32 bg-brand-500/10 rounded-full blur-2xl"></div>
+            <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-cyan-500/10 rounded-full blur-2xl"></div>
+            
+            <div class="text-center mb-8 relative z-10">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-brand-500/10 rounded-2xl border border-brand-500/20 text-brand-500 mb-4 shadow-inner">
+                    <i data-lucide="network" class="w-8 h-8"></i>
+                </div>
+                <h1 class="text-2xl font-bold text-white tracking-wide">FTTH Planner Pro</h1>
+                <p class="text-slate-400 text-sm mt-1">Sistem Perencanaan Infrastruktur Fiber Optik</p>
+            </div>
+
+            <div id="loginAlert" class="hidden mb-4 p-3 bg-red-500/10 border border-red-500/30 text-red-400 text-xs rounded-xl text-center">
+                Username atau password salah!
+            </div>
+
+            <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4 relative z-10">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Username</label>
+                    <div class="relative">
+                        <i data-lucide="user" class="w-4 h-4 absolute left-3.5 top-3.5 text-slate-500"></i>
+                        <input type="text" id="loginUsername" required class="w-full bg-slate-900/80 border border-dark-border rounded-xl pl-10 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500 transition-colors" placeholder="Masukkan username">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Password</label>
+                    <div class="relative">
+                        <i data-lucide="lock" class="w-4 h-4 absolute left-3.5 top-3.5 text-slate-500"></i>
+                        <input type="password" id="loginPassword" required class="w-full bg-slate-900/80 border border-dark-border rounded-xl pl-10 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500 transition-colors" placeholder="••••••••">
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-gradient-to-r from-brand-600 to-cyan-600 hover:from-brand-500 hover:to-cyan-500 text-white font-semibold py-3 rounded-xl shadow-lg shadow-brand-500/25 transition-all flex items-center justify-center gap-2 mt-6">
+                    <i data-lucide="log-in" class="w-4 h-4"></i> Masuk Ke Dashboard
+                </button>
+            </form>
+
+            <div class="mt-6 pt-4 border-t border-dark-border/50 text-center text-xs text-slate-500">
+                Default Login: <span class="text-slate-300 font-mono">admin</span> / <span class="text-slate-300 font-mono">admin123</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN DASHBOARD CONTENT (Protected) -->
+    <div id="appSection" class="hidden min-h-screen flex flex-col">
+        
+        <!-- HEADER / NAVIGATION BAR -->
+        <header class="no-print bg-dark-card border-b border-dark-border sticky top-0 z-40 shadow-lg">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="p-2 bg-brand-500/10 border border-brand-500/20 rounded-xl text-brand-500">
+                        <i data-lucide="network" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-white text-lg tracking-wide leading-none">FTTH Planning Dashboard</h1>
+                        <span class="text-xs text-brand-500 font-medium">Sistem Desain & Manajemen Jaringan Fiber Optik</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 sm:gap-3">
+                    <!-- Import / Export Controls -->
+                    <button onclick="triggerImport()" class="no-print px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-dark-border text-slate-200 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5" title="Impor File Data JSON">
+                        <i data-lucide="upload" class="w-3.5 h-3.5 text-cyan-400"></i>
+                        <span class="hidden md:inline">Impor JSON</span>
+                    </button>
+                    <input type="file" id="importInput" class="hidden" accept=".json" onchange="importData(event)">
+
+                    <button onclick="exportData()" class="no-print px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-dark-border text-slate-200 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5" title="Ekspor Seluruh Data ke JSON">
+                        <i data-lucide="download" class="w-3.5 h-3.5 text-brand-400"></i>
+                        <span class="hidden md:inline">Ekspor JSON</span>
+                    </button>
+
+                    <button onclick="printReport()" class="no-print px-3 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 shadow-md shadow-brand-600/30">
+                        <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+                        <span>Cetak Laporan</span>
+                    </button>
+
+                    <button onclick="confirmReset()" class="no-print px-3 py-2 bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5">
+                        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                        <span class="hidden md:inline">Reset</span>
+                    </button>
+
+                    <div class="h-6 w-px bg-dark-border mx-1"></div>
+
+                    <button onclick="handleLogout()" class="no-print p-2 bg-slate-800 hover:bg-red-500/10 text-slate-400 hover:text-red-400 border border-dark-border rounded-xl transition-all" title="Keluar">
+                        <i data-lucide="log-out" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- MAIN CONTAINER -->
+        <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+            <!-- SECTION 1: Informasi Proyek / Pekerjaan -->
+            <section class="bg-dark-card border border-dark-border rounded-2xl p-5 shadow-sm print-card">
+                <div class="flex items-center justify-between mb-4 pb-3 border-b border-dark-border">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="file-text" class="w-5 h-5 text-brand-500"></i>
+                        <h2 class="text-base font-semibold text-white tracking-wide">1. Informasi Pekerjaan Perencanaan</h2>
+                    </div>
+                    <span class="text-xs bg-brand-500/10 text-brand-400 border border-brand-500/20 px-2.5 py-1 rounded-full font-medium">Status: Draft Perencanaan</span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Nama Perancang / Technical Leader</label>
+                        <input type="text" id="infoNama" onchange="saveInfo()" placeholder="Contoh: Budi Santoso" class="w-full bg-slate-900 border border-dark-border rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-brand-500 transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Tanggal Perencanaan</label>
+                        <input type="date" id="infoTanggal" onchange="saveInfo()" class="w-full bg-slate-900 border border-dark-border rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-brand-500 transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Lokasi / Sektor Area Pekerjaan</label>
+                        <input type="text" id="infoLokasi" onchange="saveInfo()" placeholder="Contoh: Perumahan Cluster Melati - Rayon Sorong" class="w-full bg-slate-900 border border-dark-border rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-brand-500 transition-colors">
+                    </div>
+                </div>
+            </section>
+
+            <!-- METRICS & SUMMARY CARDS -->
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-3 sm:gap-4 no-print">
+                <div class="bg-dark-card border border-dark-border rounded-2xl p-4 flex flex-col justify-between relative overflow-hidden group">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs text-slate-400 font-medium">Segmen Kabel</span>
+                        <div class="p-2 bg-blue-500/10 text-blue-400 rounded-xl"><i data-lucide="git-commit" class="w-4 h-4"></i></div>
+                    </div>
+                    <div class="mt-2">
+                        <div id="metricKabelSegmen" class="text-2xl font-bold text-white">0</div>
+                        <span class="text-[10px] text-slate-500">Jalur Terkoneksi</span>
+                    </div>
+                </div>
+
+                <div class="bg-dark-card border border-dark-border rounded-2xl p-4 flex flex-col justify-between relative overflow-hidden group">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs text-slate-400 font-medium">Total Panjang Kabel</span>
+                        <div class="p-2 bg-emerald-500/10 text-emerald-400 rounded-xl"><i data-lucide="ruler" class="w-4 h-4"></i></div>
+                    </div>
+                    <div class="mt-2">
+                        <div id="metricKabelPanjang" class="text-2xl font-bold text-white">0 m</div>
+                        <span class="text-[10px] text-slate-500">Estimasi Fiber (Meter)</span>
+                    </div>
+                </div>
+
+                <div class="bg-dark-card border border-dark-border rounded-2xl p-4 flex flex-col justify-between relative overflow-hidden group">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs text-slate-400 font-medium">Jumlah Tiang</span>
+                        <div class="p-2 bg-amber-500/10 text-amber-400 rounded-xl"><i data-lucide="utility-pole" class="w-4 h-4"></i></div>
+                    </div>
+                    <div class="mt-2">
+                        <div id="metricTiangTotal" class="text-2xl font-bold text-white">0</div>
+                        <span class="text-[10px] text-slate-500">Titik Tumpu Tanam</span>
+                    </div>
+                </div>
+
+                <div class="bg-dark-card border border-dark-border rounded-2xl p-4 flex flex-col justify-between relative overflow-hidden group">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs text-slate-400 font-medium">Jumlah ODC / ODP</span>
+                        <div class="p-2 bg-purple-500/10 text-purple-400 rounded-xl"><i data-lucide="box" class="w-4 h-4"></i></div>
+                    </div>
+                    <div class="mt-2">
+                        <div id="metricOdcTotal" class="text-2xl font-bold text-white">0</div>
+                        <span class="text-[10px] text-slate-500">Perangkat Pasif Distribution</span>
+                    </div>
+                </div>
+
+                <div class="bg-dark-card border border-dark-border rounded-2xl p-4 flex flex-col justify-between relative overflow-hidden group col-span-2 md:col-span-1">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs text-slate-400 font-medium">Dokumentasi</span>
+                        <div class="p-2 bg-cyan-500/10 text-cyan-400 rounded-xl"><i data-lucide="image" class="w-4 h-4"></i></div>
+                    </div>
+                    <div class="mt-2">
+                        <div id="metricFotoTotal" class="text-2xl font-bold text-white">0</div>
+                        <span class="text-[10px] text-slate-500">Foto Lapangan Uploaded</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 2: Form Input Data Desain -->
+            <section class="bg-dark-card border border-dark-border rounded-2xl p-5 shadow-sm no-print">
+                <div class="flex items-center justify-between mb-4 pb-3 border-b border-dark-border">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="layers" class="w-5 h-5 text-brand-500"></i>
+                        <h2 class="text-base font-semibold text-white tracking-wide">2. Form Input & Manajemen Data Desain</h2>
+                    </div>
+                </div>
+
+                <!-- TABS NAVIGATION -->
+                <div class="flex border-b border-dark-border gap-2 mb-6 overflow-x-auto">
+                    <button onclick="switchTab('kabel')" id="tabBtnKabel" class="tab-btn active px-4 py-2.5 text-xs font-semibold rounded-t-xl transition-all border-b-2 border-brand-500 text-brand-400 bg-brand-500/10 flex items-center gap-2">
+                        <i data-lucide="cable" class="w-4 h-4"></i> Data Kabel Optik
+                    </button>
+                    <button onclick="switchTab('tiang')" id="tabBtnTiang" class="tab-btn px-4 py-2.5 text-xs font-semibold rounded-t-xl transition-all border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2">
+                        <i data-lucide="utility-pole" class="w-4 h-4"></i> Data Tiang Tumpu
+                    </button>
+                    <button onclick="switchTab('odc')" id="tabBtnOdc" class="tab-btn px-4 py-2.5 text-xs font-semibold rounded-t-xl transition-all border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2">
+                        <i data-lucide="box" class="w-4 h-4"></i> Data ODC / ODP
+                    </button>
+                    <button onclick="switchTab('foto')" id="tabBtnFoto" class="tab-btn px-4 py-2.5 text-xs font-semibold rounded-t-xl transition-all border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2">
+                        <i data-lucide="camera" class="w-4 h-4"></i> Dokumentasi Lapangan
+                    </button>
+                </div>
+
+                <!-- TAB CONTENT 1: KABEL -->
+                <div id="tabContentKabel" class="tab-content space-y-6">
+                    <form onsubmit="handleAddKabel(event)" class="bg-slate-900/60 p-4 rounded-xl border border-dark-border/80 grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Jenis Kabel Optik</label>
+                            <select id="kabelJenis" required class="w-full bg-slate-900 border border-dark-border rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-brand-500">
+                                <option value="">-- Pilih Jenis --</option>
+                                <option value="Kabel Feeder (24 Core)">Kabel Feeder (24 Core)</option>
+                                <option value="Kabel Feeder (48 Core)">Kabel Feeder (48 Core)</option>
+                                <option value="Kabel Feeder (96 Core)">Kabel Feeder (96 Core)</option>
+                                <option value="Kabel Distribusi (12 Core)">Kabel Distribusi (12 Core)</option>
+                                <option value="Kabel Distribusi (24 Core)">Kabel Distribusi (24 Core)</option>
+                                <option value="Kabel Drop Core (1-2 Core)">Kabel Drop Core (1-2 Core)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Panjang Kabel (Meter)</label>
+                            <input type="number" id="kabelPanjang" step="0.1" required placeholder="Contoh: 250" class="w-full bg-slate-900 border border-dark-border rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-brand-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Lokasi / Trase Kabel</label>
+                            <input type="text" id="kabelLokasi" required placeholder="Contoh: Tiang PL-01 s/d ODC-01" class="w-full bg-slate-900 border border-dark-border rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-brand-500">
+                        </div>
+                        <div class="flex items-end">
+                            <button type="submit" class="w-full bg-brand-600 hover:bg-brand-500 text-white font-semibold py-2 px-4 rounded-xl text-xs transition-all flex items-center justify-center gap-1.5 shadow-md">
+                                <i data-lucide="plus" class="w-4 h-4"></i> Tambah Kabel
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Table Kabel -->
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Daftar Data Kabel</h3>
+                            <input type="text" id="searchKabel" onkeyup="renderTables()" placeholder="Cari kabel..." class="bg-slate-900 border border-dark-border rounded-lg px-3 py-1 text-xs text-white focus:outline-none">
+                        </div>
+                        <div class="overflow-x-auto rounded-xl border border-dark-border">
+                            <table class="w-full text-left text-xs text-slate-300">
+                                <thead class="bg-slate-800 text-slate-400 font-medium border-b border-dark-border">
+                                    <tr>
+                                        <th class="p-3">NO</th>
+                                        <th class="p-3">JENIS KABEL</th>
+                                        <th class="p-3">PANJANG (M)</th>
+                                        <th class="p-3">LOKASI TRASE</th>
+                                        <th class="p-3 text-right">AKSI</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tableKabelBody" class="divide-y divide-dark-border/60 bg-slate-900/40">
+                                    <!-- Render via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB CONTENT 2: TIANG -->
+                <div id="tabContentTiang" class="tab-content hidden space-y-6">
+                    <form onsubmit="handleAddTiang(event)" class="bg-slate-900/60 p-4 rounded-xl border border-dark-border/80 grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Kode / ID Tiang</label>
+                            <input type="text" id="tiangKode" required placeholder="Contoh: PL-7M-01" class="w-full bg-slate-900 border border-dark-border rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-brand-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Tinggi / Spesifikasi</label>
+                            <select id="tiangTinggi" required class="w-full bg-slate-900 border border-dark-border rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-brand-500">
+                                <option value="Tiang Besi 7 Meter">Tiang Besi 7 Meter</option>
+                                <option value="Tiang Besi 9 Meter">Tiang Besi 9 Meter</option>
+                                <option value="Tiang Beton 9 Meter">Tiang Beton 9 Meter</option>
+                                <option value="Tiang Eksisting PLN">Tiang Eksisting PLN</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Lokasi Koordinat / Alamat</label>
+                            <input type="text" id="tiangLokasi" required placeholder="Contoh: Jl. Ahmad Yani No. 12" class="w-full bg-slate-900 border border-dark-border rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-brand-500">
+                        </div>
+                        <div class="flex items-end">
+                            <button type="submit" class="w-full bg-brand-600 hover:bg-brand-500 text-white font-semibold py-2 px-4 rounded-xl text-xs transition-all flex items-center justify-center gap-1.5 shadow-md">
+                                <i data-lucide="plus" class="w-4 h-4"></i> Tambah Tiang
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Table Tiang -->
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Daftar Data Tiang</h3>
+                            <input type="text" id="searchTiang" onkeyup="renderTables()" placeholder="Cari tiang..." class="bg-slate-900 border border-dark-border rounded-lg px-3 py-1 text-xs text-white focus:outline-none">
+                        </div>
+                        <div class="overflow-x-auto rounded-xl border border-dark-border">
+                            <table class="w-full text-left text-xs text-slate-300">
+                                <thead class="bg-slate-800 text-slate-400 font-medium border-b border-dark-border">
+                                    <tr>
+                                        <th class="p-3">NO</th>
+                                        <th class="p-3">KODE TIANG</th>
+                                        <th class="p-3">SPESIFIKASI TIANG</th>
+                                        <th class="p-3">LOKASI / ALAMAT</th>
+                                        <th class="p-3 text-right">AKSI</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tableTiangBody" class="divide-y divide-dark-border/60 bg-slate-900/40">
+                                    <!-- Render via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB CONTENT 3: ODC / ODP -->
+                <div id="tabContentOdc" class="tab-content hidden space-y-6">
+                    <form onsubmit="handleAddOdc(event)" class="bg-slate-900/60 p-4 rounded-xl border border-dark-border/80 grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Kode Perangkat</label>
+                            <input type="text" id="odcKode" required placeholder="Contoh: ODC-SM-01 atau ODP-A01" class="w-full bg-slate-900 border border-dark-border rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-brand-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Tipe Enclosure</label>
+                            <select id="odcTipe" required class="w-full bg-slate-900 border border-dark-border rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-brand-500">
+                                <option value="ODC Outdoor Cabinet (144 Port)">ODC Outdoor Cabinet (144 Port)</option>
+                                <option value="ODC Outdoor Cabinet (288 Port)">ODC Outdoor Cabinet (288 Port)</option>
+                                <option value="ODP Wall Mount (8 Port)">ODP Wall Mount (8 Port)</option>
+                                <option value="ODP Pole Mount (16 Port)">ODP Pole Mount (16 Port)</option>
+                                <option value="ODP Closure Compact (8 Port)">ODP Closure Compact (8 Port)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Kapasitas Splitter / Port</label>
+                            <input type="text" id="odcKapasitas" required placeholder="Contoh: Splitter 1:8 / 16 Port" class="w-full bg-slate-900 border border-dark-border rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-brand-500">
+                        </div>
+                        <div class="flex items-end">
+                            <button type="submit" class="w-full bg-brand-600 hover:bg-brand-500 text-white font-semibold py-2 px-4 rounded-xl text-xs transition-all flex items-center justify-center gap-1.5 shadow-md">
+                                <i data-lucide="plus" class="w-4 h-4"></i> Tambah ODC/ODP
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Table ODC -->
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Daftar Data ODC / ODP</h3>
+                            <input type="text" id="searchOdc" onkeyup="renderTables()" placeholder="Cari ODC/ODP..." class="bg-slate-900 border border-dark-border rounded-lg px-3 py-1 text-xs text-white focus:outline-none">
+                        </div>
+                        <div class="overflow-x-auto rounded-xl border border-dark-border">
+                            <table class="w-full text-left text-xs text-slate-300">
+                                <thead class="bg-slate-800 text-slate-400 font-medium border-b border-dark-border">
+                                    <tr>
+                                        <th class="p-3">NO</th>
+                                        <th class="p-3">KODE PERANGKAT</th>
+                                        <th class="p-3">TIPE PERANGKAT</th>
+                                        <th class="p-3">KAPASITAS</th>
+                                        <th class="p-3 text-right">AKSI</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tableOdcBody" class="divide-y divide-dark-border/60 bg-slate-900/40">
+                                    <!-- Render via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB CONTENT 4: DOKUMENTASI FOTO (IMAGE UPLOAD) -->
+                <div id="tabContentFoto" class="tab-content hidden space-y-6">
+                    <div class="bg-slate-900/60 p-5 rounded-xl border border-dark-border/80">
+                        <label class="block text-xs font-medium text-slate-300 mb-2">Upload Foto / Sketsa Survey Lapangan</label>
+                        <div class="flex flex-col sm:flex-row items-center gap-4">
+                            <label class="w-full sm:w-auto cursor-pointer bg-slate-800 hover:bg-slate-700 border border-dashed border-brand-500/50 hover:border-brand-400 text-brand-400 px-5 py-3 rounded-xl text-xs font-medium flex items-center justify-center gap-2 transition-all">
+                                <i data-lucide="upload-cloud" class="w-5 h-5"></i>
+                                <span>Pilih Gambar (PNG, JPG, WebP)</span>
+                                <input type="file" id="fotoFileInput" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
+                            </label>
+                            <span class="text-xs text-slate-500">Mendukung upload gambar sketsa jalur, survei tiang, atau peta survei.</span>
+                        </div>
+                    </div>
+
+                    <!-- Image Gallery Grid -->
+                    <div>
+                        <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3">Galeri Foto Lapangan</h3>
+                        <div id="fotoGalleryGrid" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <!-- Render via JS -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 3: Rekapitulasi Akhir Hasil Perencanaan (Printable View Area) -->
+            <section class="bg-dark-card border border-dark-border rounded-2xl p-5 shadow-sm print-card">
+                <div class="flex items-center justify-between mb-4 pb-3 border-b border-dark-border no-print">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="clipboard-check" class="w-5 h-5 text-brand-500"></i>
+                        <h2 class="text-base font-semibold text-white tracking-wide">3. Rekapitulasi Akhir Hasil Perencanaan</h2>
+                    </div>
+                </div>
+
+                <!-- Header khusus untuk hasil Cetak Print/PDF -->
+                <div class="print-only mb-6 border-b-2 border-black pb-4 text-slate-900">
+                    <div class="text-center">
+                        <h1 class="text-2xl font-bold uppercase">LAPORAN HASIL PERENCANAAN JARINGAN FTTH</h1>
+                        <p class="text-sm italic">Fiber To The Home - Infrastructure & Layout Design</p>
+                    </div>
+                    <div class="grid grid-cols-2 mt-4 text-xs">
+                        <div>
+                            <p><strong>Nama Pembuat:</strong> <span id="printNama">-</span></p>
+                            <p><strong>Tanggal:</strong> <span id="printTanggal">-</span></p>
+                        </div>
+                        <div>
+                            <p><strong>Lokasi Pekerjaan:</strong> <span id="printLokasi">-</span></p>
+                            <p><strong>Status:</strong> Final Draft Perencanaan</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <!-- REKAP KABEL -->
+                    <div>
+                        <h3 class="text-xs font-bold text-brand-400 uppercase tracking-wider mb-2 print:text-black">1. REKAPITULASI KABEL OPTIK</h3>
+                        <div class="overflow-x-auto rounded-lg border border-dark-border print-card">
+                            <table class="w-full text-left text-xs text-slate-300 print-table">
+                                <thead class="bg-slate-800/80 text-slate-400 font-medium">
+                                    <tr>
+                                        <th class="p-2.5">No</th>
+                                        <th class="p-2.5">Jenis Kabel</th>
+                                        <th class="p-2.5">Panjang (Meter)</th>
+                                        <th class="p-2.5">Lokasi Trase</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="rekapKabelBody" class="divide-y divide-dark-border">
+                                    <!-- Render JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- REKAP TIANG -->
+                    <div>
+                        <h3 class="text-xs font-bold text-brand-400 uppercase tracking-wider mb-2 print:text-black">2. REKAPITULASI TIANG TUMPU</h3>
+                        <div class="overflow-x-auto rounded-lg border border-dark-border print-card">
+                            <table class="w-full text-left text-xs text-slate-300 print-table">
+                                <thead class="bg-slate-800/80 text-slate-400 font-medium">
+                                    <tr>
+                                        <th class="p-2.5">No</th>
+                                        <th class="p-2.5">Kode Tiang</th>
+                                        <th class="p-2.5">Spesifikasi</th>
+                                        <th class="p-2.5">Lokasi Alamat</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="rekapTiangBody" class="divide-y divide-dark-border">
+                                    <!-- Render JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- REKAP ODC/ODP -->
+                    <div>
+                        <h3 class="text-xs font-bold text-brand-400 uppercase tracking-wider mb-2 print:text-black">3. REKAPITULASI ODC & ODP</h3>
+                        <div class="overflow-x-auto rounded-lg border border-dark-border print-card">
+                            <table class="w-full text-left text-xs text-slate-300 print-table">
+                                <thead class="bg-slate-800/80 text-slate-400 font-medium">
+                                    <tr>
+                                        <th class="p-2.5">No</th>
+                                        <th class="p-2.5">Kode Perangkat</th>
+                                        <th class="p-2.5">Tipe Enclosure</th>
+                                        <th class="p-2.5">Kapasitas</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="rekapOdcBody" class="divide-y divide-dark-border">
+                                    <!-- Render JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- FOTO DOKUMENTASI PRINT -->
+                    <div class="print-only">
+                        <h3 class="text-xs font-bold uppercase tracking-wider mb-2 text-black">4. LAMPIRAN DOKUMENTASI FOTO LAPANGAN</h3>
+                        <div id="printFotoGrid" class="grid grid-cols-2 gap-4">
+                            <!-- Render JS -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- FOOTER -->
+        <footer class="no-print bg-dark-card border-t border-dark-border py-4 mt-8">
+            <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500">
+                FTTH Network Planning Dashboard &copy; 2026 - Sistem Informasi Perencanaan Fiber Optik Modern
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // STATE INITIALIZATION
+        let state = {
+            info: { nama: '', tanggal: new Date().toISOString().split('T')[0], lokasi: '' },
+            kabel: [],
+            tiang: [],
+            odc: [],
+            foto: []
+        };
+
+        // LOCAL STORAGE KEYS
+        const STORAGE_KEY = 'ftth_planner_data_v2';
+        const AUTH_KEY = 'ftth_planner_auth';
+
+        // INITIAL LOAD ON PAGE LOAD
+        window.onload = function() {
+            lucide.createIcons();
+            checkAuth();
+            loadStateFromStorage();
+            renderAll();
+        };
+
+        // AUTHENTICATION LOGIC
+        function checkAuth() {
+            const isAuth = localStorage.getItem(AUTH_KEY);
+            if (isAuth === 'true') {
+                document.getElementById('loginSection').classList.add('hidden');
+                document.getElementById('appSection').classList.remove('hidden');
+            } else {
+                document.getElementById('loginSection').classList.remove('hidden');
+                document.getElementById('appSection').classList.add('hidden');
+            }
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const u = document.getElementById('loginUsername').value.trim();
+            const p = document.getElementById('loginPassword').value.trim();
+
+            if (u === 'admin' && p === 'admin123') {
+                localStorage.setItem(AUTH_KEY, 'true');
+                document.getElementById('loginAlert').classList.add('hidden');
+                checkAuth();
+            } else {
+                document.getElementById('loginAlert').classList.remove('hidden');
+            }
+        }
+
+        function handleLogout() {
+            localStorage.removeItem(AUTH_KEY);
+            checkAuth();
+        }
+
+        function saveStateToStorage() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            } catch (e) {
+                console.error("Gagal menyimpan ke LocalStorage", e);
+            }
+        }
+
+        function loadStateFromStorage() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                try {
+                    state = JSON.parse(saved);
+                } catch (e) {
+                    console.error("Error parsing stored JSON", e);
+                }
+            }
+            // Populate Info inputs
+            document.getElementById('infoNama').value = state.info.nama || '';
+            document.getElementById('infoTanggal').value = state.info.tanggal || new Date().toISOString().split('T')[0];
+            document.getElementById('infoLokasi').value = state.info.lokasi || '';
+        }
+
+        function saveInfo() {
+            state.info.nama = document.getElementById('infoNama').value;
+            state.info.tanggal = document.getElementById('infoTanggal').value;
+            state.info.lokasi = document.getElementById('infoLokasi').value;
+            saveStateToStorage();
+            renderRekap();
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('border-brand-500', 'text-brand-400', 'bg-brand-500/10');
+                btn.classList.add('border-transparent', 'text-slate-400');
+            });
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
+
+            const targetBtn = document.getElementById(`tabBtn${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`);
+            const targetContent = document.getElementById(`tabContent${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`);
+
+            if (targetBtn && targetContent) {
+                targetBtn.classList.remove('border-transparent', 'text-slate-400');
+                targetBtn.classList.add('border-brand-500', 'text-brand-400', 'bg-brand-500/10');
+                targetContent.classList.remove('hidden');
+            }
+        }
+
+        // ADD DATA HANDLERS
+        function handleAddKabel(e) {
+            e.preventDefault();
+            const jenis = document.getElementById('kabelJenis').value;
+            const panjang = parseFloat(document.getElementById('kabelPanjang').value) || 0;
+            const lokasi = document.getElementById('kabelLokasi').value.trim();
+
+            state.kabel.push({ id: Date.now(), jenis, panjang, lokasi });
+            saveStateToStorage();
+            renderAll();
+            e.target.reset();
+        }
+
+        function handleAddTiang(e) {
+            e.preventDefault();
+            const kode = document.getElementById('tiangKode').value.trim();
+            const tinggi = document.getElementById('tiangTinggi').value;
+            const lokasi = document.getElementById('tiangLokasi').value.trim();
+
+            state.tiang.push({ id: Date.now(), kode, tinggi, lokasi });
+            saveStateToStorage();
+            renderAll();
+            e.target.reset();
+        }
+
+        function handleAddOdc(e) {
+            e.preventDefault();
+            const kode = document.getElementById('odcKode').value.trim();
+            const tipe = document.getElementById('odcTipe').value;
+            const kapasitas = document.getElementById('odcKapasitas').value.trim();
+
+            state.odc.push({ id: Date.now(), kode, tipe, kapasitas });
+            saveStateToStorage();
+            renderAll();
+            e.target.reset();
+        }
+
+        // DELETE HANDLERS
+        function deleteKabel(id) {
+            state.kabel = state.kabel.filter(item => item.id !== id);
+            saveStateToStorage();
+            renderAll();
+        }
+
+        function deleteTiang(id) {
+            state.tiang = state.tiang.filter(item => item.id !== id);
+            saveStateToStorage();
+            renderAll();
+        }
+
+        function deleteOdc(id) {
+            state.odc = state.odc.filter(item => item.id !== id);
+            saveStateToStorage();
+            renderAll();
+        }
+
+        function deleteFoto(id) {
+            state.foto = state.foto.filter(item => item.id !== id);
+            saveStateToStorage();
+            renderAll();
+        }
+
+        // IMAGE UPLOAD HANDLER
+        function handleImageUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                state.foto.push({
+                    id: Date.now(),
+                    url: evt.target.result,
+                    nama: file.name
+                });
+                saveStateToStorage();
+                renderAll();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // RENDER FUNCTIONS
+        function renderAll() {
+            renderMetrics();
+            renderTables();
+            renderRekap();
+            renderFotoGallery();
+            lucide.createIcons();
+        }
+
+        function renderMetrics() {
+            document.getElementById('metricKabelSegmen').innerText = state.kabel.length;
+            const totalPanjang = state.kabel.reduce((acc, curr) => acc + (curr.panjang || 0), 0);
+            document.getElementById('metricKabelPanjang').innerText = `${totalPanjang.toLocaleString('id-ID')} m`;
+            document.getElementById('metricTiangTotal').innerText = state.tiang.length;
+            document.getElementById('metricOdcTotal').innerText = state.odc.length;
+            document.getElementById('metricFotoTotal').innerText = state.foto.length;
+        }
+
+        function renderTables() {
+            // Kabel Table
+            const searchK = (document.getElementById('searchKabel')?.value || '').toLowerCase();
+            const kabelBody = document.getElementById('tableKabelBody');
+            const filteredKabel = state.kabel.filter(k => k.jenis.toLowerCase().includes(searchK) || k.lokasi.toLowerCase().includes(searchK));
+            
+            kabelBody.innerHTML = filteredKabel.length === 0 
+                ? `<tr><td colspan="5" class="p-4 text-center text-slate-500 italic">Belum ada data kabel yang diinput.</td></tr>`
+                : filteredKabel.map((k, idx) => `
+                    <tr class="hover:bg-slate-800/50">
+                        <td class="p-3 font-mono">${idx + 1}</td>
+                        <td class="p-3 font-medium text-white">${k.jenis}</td>
+                        <td class="p-3 font-mono text-cyan-400">${k.panjang} m</td>
+                        <td class="p-3 text-slate-400">${k.lokasi}</td>
+                        <td class="p-3 text-right">
+                            <button onclick="deleteKabel(${k.id})" class="p-1 text-slate-500 hover:text-red-400 rounded transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        </td>
+                    </tr>
+                `).join('');
+
+            // Tiang Table
+            const searchT = (document.getElementById('searchTiang')?.value || '').toLowerCase();
+            const tiangBody = document.getElementById('tableTiangBody');
+            const filteredTiang = state.tiang.filter(t => t.kode.toLowerCase().includes(searchT) || t.lokasi.toLowerCase().includes(searchT));
+            
+            tiangBody.innerHTML = filteredTiang.length === 0 
+                ? `<tr><td colspan="5" class="p-4 text-center text-slate-500 italic">Belum ada data tiang yang diinput.</td></tr>`
+                : filteredTiang.map((t, idx) => `
+                    <tr class="hover:bg-slate-800/50">
+                        <td class="p-3 font-mono">${idx + 1}</td>
+                        <td class="p-3 font-medium text-white">${t.kode}</td>
+                        <td class="p-3 text-amber-400">${t.tinggi}</td>
+                        <td class="p-3 text-slate-400">${t.lokasi}</td>
+                        <td class="p-3 text-right">
+                            <button onclick="deleteTiang(${t.id})" class="p-1 text-slate-500 hover:text-red-400 rounded transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        </td>
+                    </tr>
+                `).join('');
+
+            // ODC Table
+            const searchO = (document.getElementById('searchOdc')?.value || '').toLowerCase();
+            const odcBody = document.getElementById('tableOdcBody');
+            const filteredOdc = state.odc.filter(o => o.kode.toLowerCase().includes(searchO) || o.tipe.toLowerCase().includes(searchO));
+
+            odcBody.innerHTML = filteredOdc.length === 0 
+                ? `<tr><td colspan="5" class="p-4 text-center text-slate-500 italic">Belum ada data ODC/ODP yang diinput.</td></tr>`
+                : filteredOdc.map((o, idx) => `
+                    <tr class="hover:bg-slate-800/50">
+                        <td class="p-3 font-mono">${idx + 1}</td>
+                        <td class="p-3 font-medium text-white">${o.kode}</td>
+                        <td class="p-3 text-purple-400">${o.tipe}</td>
+                        <td class="p-3 text-slate-400">${o.kapasitas}</td>
+                        <td class="p-3 text-right">
+                            <button onclick="deleteOdc(${o.id})" class="p-1 text-slate-500 hover:text-red-400 rounded transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        </td>
+                    </tr>
+                `).join('');
+        }
+
+        function renderRekap() {
+            // Fill Print Metadata
+            document.getElementById('printNama').innerText = state.info.nama || '-';
+            document.getElementById('printTanggal').innerText = state.info.tanggal || '-';
+            document.getElementById('printLokasi').innerText = state.info.lokasi || '-';
+
+            // Rekap Kabel
+            const rekapKabel = document.getElementById('rekapKabelBody');
+            rekapKabel.innerHTML = state.kabel.length === 0
+                ? `<tr><td colspan="4" class="p-3 text-center text-slate-500 italic">Tidak ada data kabel.</td></tr>`
+                : state.kabel.map((k, i) => `<tr><td class="p-2">${i+1}</td><td class="p-2">${k.jenis}</td><td class="p-2">${k.panjang} m</td><td class="p-2">${k.lokasi}</td></tr>`).join('');
+
+            // Rekap Tiang
+            const rekapTiang = document.getElementById('rekapTiangBody');
+            rekapTiang.innerHTML = state.tiang.length === 0
+                ? `<tr><td colspan="4" class="p-3 text-center text-slate-500 italic">Tidak ada data tiang.</td></tr>`
+                : state.tiang.map((t, i) => `<tr><td class="p-2">${i+1}</td><td class="p-2">${t.kode}</td><td class="p-2">${t.tinggi}</td><td class="p-2">${t.lokasi}</td></tr>`).join('');
+
+            // Rekap ODC
+            const rekapOdc = document.getElementById('rekapOdcBody');
+            rekapOdc.innerHTML = state.odc.length === 0
+                ? `<tr><td colspan="4" class="p-3 text-center text-slate-500 italic">Tidak ada data ODC/ODP.</td></tr>`
+                : state.odc.map((o, i) => `<tr><td class="p-2">${i+1}</td><td class="p-2">${o.kode}</td><td class="p-2">${o.tipe}</td><td class="p-2">${o.kapasitas}</td></tr>`).join('');
+        }
+
+        function renderFotoGallery() {
+            const grid = document.getElementById('fotoGalleryGrid');
+            const printGrid = document.getElementById('printFotoGrid');
+
+            if (state.foto.length === 0) {
+                grid.innerHTML = `<div class="col-span-full text-center py-8 text-slate-500 text-xs italic">Belum ada foto dokumentasi yang diupload.</div>`;
+                printGrid.innerHTML = `<div class="col-span-full text-xs text-slate-500">Tidak ada lampiran foto.</div>`;
+                return;
+            }
+
+            grid.innerHTML = state.foto.map(f => `
+                <div class="relative group bg-slate-900 rounded-xl overflow-hidden border border-dark-border">
+                    <img src="${f.url}" alt="${f.nama}" class="w-full h-32 object-cover">
+                    <div class="absolute inset-0 bg-slate-950/70 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-2">
+                        <button onclick="deleteFoto(${f.id})" class="p-2 bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white rounded-lg transition-all text-xs flex items-center gap-1">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i> Hapus
+                        </button>
+                    </div>
+                    <div class="p-2 text-[10px] text-slate-400 truncate bg-slate-900/90">${f.nama}</div>
+                </div>
+            `).join('');
+
+            printGrid.innerHTML = state.foto.map(f => `
+                <div class="border border-slate-300 p-2 rounded">
+                    <img src="${f.url}" class="w-full h-40 object-cover rounded mb-1">
+                    <span class="text-[10px] text-slate-600 block text-center">${f.nama}</span>
+                </div>
+            `).join('');
+        }
+
+        // EXPORT DATA TO JSON FILE
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `FTTH_Planning_${state.info.nama || 'Project'}_${new Date().toISOString().split('T')[0]}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        // IMPORT DATA FROM JSON FILE
+        function triggerImport() {
+            document.getElementById('importInput').click();
+        }
+
+        function importData(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                try {
+                    const importedState = JSON.parse(evt.target.result);
+                    if (importedState && typeof importedState === 'object') {
+                        state = importedState;
+                        saveStateToStorage();
+                        loadStateFromStorage();
+                        renderAll();
+                        alert('Data FTTH berhasil diimpor!');
+                    }
+                } catch (err) {
+                    alert('Format file JSON tidak valid!');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // PRINT REPORT
+        function printReport() {
+            window.print();
+        }
+
+        // RESET DATA
+        function confirmReset() {
+            if (confirm("Apakah Anda yakin ingin menghapus SELURUH data perencanaan FTTH ini? Tindakan ini tidak dapat dibatalkan.")) {
+                state = {
+                    info: { nama: '', tanggal: new Date().toISOString().split('T')[0], lokasi: '' },
+                    kabel: [],
+                    tiang: [],
+                    odc: [],
+                    foto: []
+                };
+                saveStateToStorage();
+                loadStateFromStorage();
+                renderAll();
+            }
+        }
+    </script>
+</body>
+</html>
